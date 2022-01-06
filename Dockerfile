@@ -17,7 +17,7 @@ WORKDIR /java
 RUN apkArch="$(apk --print-arch)"; \
     case "$apkArch" in \
         aarch64) wget {{download_url_arm}} -o openjdk.{{extension_arm}} ;; \
-        x86) wget {{download_url_x86}} -o openjdk.{{extension_x86}} ;; \
+        x86_64) wget {{download_url_x86}} -o openjdk.{{extension_x86}} ;; \
     esac;
 # install
 RUN tar -xzvf openjdk.{{extension_x86}}
