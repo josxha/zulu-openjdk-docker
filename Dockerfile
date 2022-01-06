@@ -11,7 +11,7 @@ LABEL org.opencontainers.image.source="https://github.com/josxha/zulu-openjdk-do
       org.opencontainers.image.description="Automatic Docker builds for Paper Minecraft"
 
 # TODO install zulu openjdk
-RUN wget {{download_url_x86}} -o openjdk-x86.{{extension_x86}}
-RUN wget {{download_url_arm}} -o openjdk-arm.{{extension_arm}}
+RUN test $TARGETARCH -eq "x86" && wget {{download_url_x86}} -o openjdk-x86.{{extension_x86}}
+RUN test $TARGETARCH -eq "arm" && wget {{download_url_arm}} -o openjdk-arm.{{extension_arm}}
 
 ENTRYPOINT ["java", "-version"]

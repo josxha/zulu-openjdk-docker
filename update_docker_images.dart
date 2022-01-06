@@ -61,15 +61,25 @@ main(List<String> args) async {
         .replaceFirst("{{download_url_arm}}", zuluDataArm.url)
         .replaceAll("{{extension_x86}}", zuluDataX86.extension)
         .replaceAll("{{extension_arm}}", zuluDataArm.extension);
-    File("Dockerfile").writeAsString(dockerfile);
+    File("Dockerfile.complete").writeAsString(dockerfile);
 
     var tags = [
       "$javaBundleVersion-$JAVA_TLS_VERSION",
       "latest",
       javaBundleVersion,
-      "$javaBundleVersion-$JAVA_TLS_VERSION-${zuluDataX86.zuluVersion}",
+      versionTag,
     ];
-    await dockerBuildPushRemove(tags);
+    var archsFull = OS_ARCHITECTURES.map((var arch) {
+      switch (arch) {
+        case "x86":
+          return "linux/amd64";
+        case "arm":
+          return "linux/arm64";
+        default:
+          throw "Unknown buildx --platform value for architecture '$arch'.";
+      }
+    }).toList();
+    await dockerBuildPushRemove(tags, archsFull);
     print("[$versionTag] Built, pushed and cleaned up successfully!");
   }
 }
@@ -101,8 +111,8 @@ Future<ZuluData> getZuluData({required String bundle_type, required String arch,
   }
 }
 
-Future<void> dockerBuildPushRemove(List<String> tags) async {
-  var taskResult = dockerBuild(tags);
+Future<void> dockerBuildPushRemove(List<String> tags, List<String> archsFull) async {
+  var taskResult = dockerBuild(tags, archsFull);
   if (taskResult.exitCode != 0) {
     print(taskResult.stdout);
     print(taskResult.stderr);
@@ -124,14 +134,16 @@ Future<void> dockerBuildPushRemove(List<String> tags) async {
   }
 }
 
-ProcessResult dockerBuild(List<String> tags) {
-  var args = ["build", "."];
-  tags.forEach((String tag) {
+ProcessResult dockerBuild(List<String> tags, List<String> archs) {
+  var args = ["buildx", "-f", "Dockerfile.complete", "build", "."];
+  args.add("--platform");
+  args.add(archs.join(","));
+  for (var tag in tags) {
     args.addAll([
       "--tag",
       "josxha/zulu-openjdk:$tag",
     ]);
-  });
+  }
   return Process.runSync("docker", args);
 }
 
