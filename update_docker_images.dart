@@ -6,7 +6,7 @@ const JAVA_TLS_VERSION = 17; // arm64 builds only available for openjdk17
 const HARDWARE_BITNESS = 64; // only builds for 64bit
 // headless version not available for arm64
 // https://docs.azul.com/core/zulu-openjdk/supported-platforms
-const JAVA_BUNDLE_VERSIONS = ["jre, jdk"];
+const JAVA_BUNDLE_VERSIONS = ["jre", "jdk"];
 const OS_ARCHITECTURES = ["x86", "arm"];
 const DOCKER_TAG_API = "https://registry.hub.docker.com/v1/repositories/josxha/zulu-openjdk/tags";
 
@@ -30,12 +30,13 @@ main(List<String> args) async {
   var dockerImageTags = await getDockerImageTags();
 
   for (var javaBundleVersion in JAVA_BUNDLE_VERSIONS) {
-    List<Future<ZuluData>> futures = OS_ARCHITECTURES.map((var arch) {
-      return getZuluData(
+    List<Future<ZuluData>> futures = [];
+    for (var arch in OS_ARCHITECTURES) {
+      futures.add(getZuluData(
         bundle_type: javaBundleVersion,
         arch: arch,
-      );
-    }).toList();
+      ));
+    }
     List<ZuluData> zuluDataList = await Future.wait(futures);
     var zuluDataX86 = zuluDataList[0];
     var zuluDataArm = zuluDataList[1];
@@ -88,19 +89,23 @@ main(List<String> args) async {
 /// Azul API documentation:
 /// https://app.swaggerhub.com/domains-docs/azul/zulu-download-api-shared/1.0#/components/pathitems/Bundles/get
 Future<ZuluData> getZuluData({required String bundle_type, required String arch, int java_version = JAVA_TLS_VERSION, int hw_bitness = HARDWARE_BITNESS}) async {
-  var response = await get(Uri(
+  // Example url:
+  // https://api.azul.com/zulu/download/community/v1.0/bundles/latest/?os=linux_musl&arch=arm&hw_bitness=64&bundle_type=jre&ext=&java_version=17&features=headfull
+  var uri = Uri(
     scheme: "https",
-    host: "app.swaggerhub.com",
+    host: "api.azul.com",
     path: "zulu/download/community/v1.0/bundles/latest",
     queryParameters: {
       "os": "linux_musl", // alpine linux
       "arch": arch,
-      "hw_bitness": hw_bitness,
+      "hw_bitness": hw_bitness.toString(),
       "bundle_type": bundle_type,
-      "java_version": java_version,
-      "features": "headfull,"
+      "java_version": java_version.toString(),
+      "features": "headfull"
     },
-  ));
+  );
+  print(uri);
+  var response = await get(uri);
   switch (response.statusCode) {
     case 200:
       return ZuluData.parse(jsonDecode(response.body));
@@ -297,8 +302,8 @@ class ZuluData {
       bundle_type: json['bundle_type'],
       abi: json['abi'],
       bundle_uuid: json['bundle_uuid'],
-      cpu_gen: json['cpu_gen'],
-      features: json['features'],
+      cpu_gen: (json['cpu_gen'] as List).cast<String>(),
+      features: (json['features'] as List).cast<String>(),
       hw_bitness: json['hw_bitness'],
       id: json['id'],
       javafx: json['javafx'],
