@@ -104,7 +104,7 @@ Future<ZuluData> getZuluData({required String bundle_type, required String arch,
       "features": "headfull"
     },
   );
-  print(uri);
+  //print(uri);
   var response = await get(uri);
   switch (response.statusCode) {
     case 200:
@@ -161,8 +161,7 @@ ProcessResult dockerRemove(String tag) {
 
 ProcessResult dockerPush(String tag) {
   if (DRY_RUN) {
-    return ProcessResult(
-        12345, 0, "Dry run. Skip push to container registry.", "");
+    return ProcessResult(12345, 0, "Dry run. Skip push to container registry.", "");
   }
   return Process.runSync("docker", [
     "push",
