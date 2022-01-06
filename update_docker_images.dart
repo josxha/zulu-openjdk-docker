@@ -62,7 +62,7 @@ main(List<String> args) async {
         .replaceFirst("{{download_url_arm}}", zuluDataArm.url)
         .replaceAll("{{extension_x86}}", zuluDataX86.extension)
         .replaceAll("{{extension_arm}}", zuluDataArm.extension);
-    File("Dockerfile.complete").writeAsString(dockerfile);
+    await File("Dockerfile.complete").writeAsString(dockerfile);
 
     var tags = [
       "$javaBundleVersion-$JAVA_TLS_VERSION",
