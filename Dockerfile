@@ -8,16 +8,17 @@ LABEL org.opencontainers.image.source="https://github.com/josxha/zulu-openjdk-do
       org.opencontainers.image.documentation="https://github.com/josxha/zulu-openjdk-docker/blob/main/README.md" \
       org.opencontainers.image.title="Zulu OpenJDK" \
       org.opencontainers.image.description="Automatic Docker builds for Zulu OpenJDK"
+      
 RUN mkdir /java
 WORKDIR /java
+
+RUN arch="$(apk --print-arch)"
 
 FROM base AS branch-x86_64
 COPY {{name_x86}} openjdk.tar.gz
 
 FROM base AS branch-aarch64
 COPY {{name_arm}} openjdk.tar.gz
-
-RUN arch="$(apk --print-arch)"
 
 FROM branch-${arch} AS final
 # install OpenJDK
