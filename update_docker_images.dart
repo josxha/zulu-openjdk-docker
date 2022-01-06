@@ -14,12 +14,6 @@ bool DRY_RUN = false;
 bool FORCE_BUILDS = false;
 
 main(List<String> args) async {
-  var response = await get(Uri.parse("https://cdn.azul.com/zulu/bin/zulu17.30.15-ca-jre17.0.1-linux_musl_aarch64.tar.gz"));
-  print(response.statusCode);
-  print(response.contentLength);
-  if (response.statusCode != 200)
-    print(response.body);
-
   for (var arg in args) {
     switch (arg) {
       case "force":
@@ -61,13 +55,18 @@ main(List<String> args) async {
 
     // image doesn't exist yet
     print("[$versionTag] Build and push image");
-
+    // download openJDK archives
+    for (var zuluData in zuluDataList) {
+      var response = await get(Uri.parse(zuluData.url));
+      if (response.statusCode != 200)
+        throw "Couldn't download ${zuluData.name}\n${response.body}";
+      await File(zuluData.name).writeAsBytes(response.bodyBytes);
+    }
+    // create Dockerfile
     String dockerfile = await File("Dockerfile").readAsString();
     dockerfile = dockerfile
-        .replaceFirst("{{download_url_x86}}", zuluDataX86.url)
-        .replaceFirst("{{download_url_arm}}", zuluDataArm.url)
-        .replaceAll("{{extension_x86}}", zuluDataX86.extension)
-        .replaceAll("{{extension_arm}}", zuluDataArm.extension);
+        .replaceFirst("{{name_x86}}", zuluDataX86.name)
+        .replaceFirst("{{name_arm}}", zuluDataArm.name);
     await File("Dockerfile.complete").writeAsString(dockerfile);
 
     var tags = [
