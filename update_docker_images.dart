@@ -14,6 +14,12 @@ bool DRY_RUN = false;
 bool FORCE_BUILDS = false;
 
 main(List<String> args) async {
+  var response = await get(Uri.parse("https://cdn.azul.com/zulu/bin/zulu17.30.15-ca-jre17.0.1-linux_musl_aarch64.tar.gz"));
+  print(response.statusCode);
+  print(response.contentLength);
+  if (response.statusCode != 200)
+    print(response.body);
+
   for (var arg in args) {
     switch (arg) {
       case "force":
