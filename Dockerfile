@@ -17,8 +17,8 @@ WORKDIR /java
 ARG userAgent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.45 Safari/537.36"
 RUN apkArch="$(apk --print-arch)"; \
     case "$apkArch" in \
-        aarch64) wget -U $userAgent {{download_url_arm}} ;; \
-        x86_64) wget -U $userAgent {{download_url_x86}} ;; \
+        aarch64) wget -U "$userAgent" {{download_url_arm}} ;; \
+        x86_64) wget -U "$userAgent" {{download_url_x86}} ;; \
     esac;
 # install
 RUN tar -xzvf openjdk.{{extension_x86}}
