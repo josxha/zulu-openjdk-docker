@@ -13,8 +13,12 @@ LABEL org.opencontainers.image.source="https://github.com/josxha/zulu-openjdk-do
 RUN mkdir /java
 WORKDIR /java
 # download openjdk
-ARG TARGETARCH="arm"
-RUN [ "$TARGETARCH" == "x86" ] && wget {{download_url_x86}} -o openjdk.{{extension_x86}} || wget {{download_url_arm}} -o openjdk.{{extension_arm}}
+# https://stackoverflow.com/a/58222507
+RUN apkArch="$(apk --print-arch)"; \
+    case "$apkArch" in \
+        aarch64) wget {{download_url_arm}} -o openjdk.{{extension_arm}} ;; \
+        x86) wget {{download_url_x86}} -o openjdk.{{extension_x86}} ;; \
+    esac;
 # install
 RUN tar -xzvf openjdk.{{extension_x86}}
 RUN export PATH=/java/bin:$PATH
