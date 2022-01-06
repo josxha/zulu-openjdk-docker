@@ -140,7 +140,7 @@ Future<void> dockerBuildPushRemove(List<String> tags, List<String> archsFull) as
 }
 
 ProcessResult dockerBuild(List<String> tags, List<String> archs) {
-  var args = ["buildx", "-f", "Dockerfile.complete", "build", "."];
+  var args = ["buildx", "build", "-f", "Dockerfile.complete", "."];
   args.add("--platform");
   args.add(archs.join(","));
   for (var tag in tags) {
