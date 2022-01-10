@@ -21,4 +21,3 @@ RUN tar -xzvf openjdk.tar.gz; \
 ENV PATH="/java/bin:${PATH}"
 
 WORKDIR /java
-ENTRYPOINT ["java", "-version"]
