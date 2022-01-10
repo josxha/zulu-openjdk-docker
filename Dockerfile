@@ -19,7 +19,7 @@ COPY openjdk-${TARGETARCH}.tar.gz openjdk.tar.gz
 # install OpenJDK
 RUN tar -xzvf openjdk.tar.gz; \
     rm openjdk.tar.gz; \
-    mv zulu* /java \
+    mv zulu* /java
 
 ENV PATH="/java/bin:${PATH}"
 WORKDIR /java
