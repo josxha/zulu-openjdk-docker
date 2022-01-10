@@ -112,7 +112,7 @@ Future<ZuluData> getZuluData({required String features, required String arch, in
 Future<void> dockerBuildPushRemove(List<String> tags) async {
   var args = [
     "buildx", "build", ".",
-    DRY_RUN ? "--load" : "--push",
+    "--push",
     "--platform",
   ];
   args.add(OS_ARCHITECTURES.map((var arch) => arch.dockerFull).toList().join(","));
