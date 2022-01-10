@@ -6,7 +6,7 @@ const JAVA_LTS_VERSION = 17; // arm64 builds only available for openjdk17
 const HARDWARE_BITNESS = 64; // only builds for 64bit
 // headless version not available for arm64
 // https://docs.azul.com/core/zulu-openjdk/supported-platforms
-const JAVA_BUNDLE_VERSIONS = ["jre", "jdk"];
+const List<JavaBundleVersions> JAVA_BUNDLE_VERSIONS = [JavaBundleVersions.jre, JavaBundleVersions.jdk];
 const OS_ARCHITECTURES = [Architectures.x86_64, Architectures.arm64];
 const DOCKER_TAG_API = "https://registry.hub.docker.com/v1/repositories/josxha/zulu-openjdk/tags";
 
@@ -34,13 +34,13 @@ main(List<String> args) async {
     Map<Architectures, ZuluData> data = {};
     for (var arch in OS_ARCHITECTURES) {
       var zuluData = await getZuluData(
-        bundle_type: javaBundleVersion,
+        features: javaBundleVersion.zuluString,
         arch: arch.zulu,
       );
       data[arch] = zuluData;
 
-      print("[$javaBundleVersion-$JAVA_LTS_VERSION] Check if the docker image for $javaBundleVersion needs to get updated...");
-      versionTag = "$javaBundleVersion-$JAVA_LTS_VERSION-${zuluData.zuluVersion}";
+      print("[${javaBundleVersion.bundleType}-$JAVA_LTS_VERSION] Check if the docker image for ${javaBundleVersion.bundleType} needs to get updated...");
+      versionTag = "${javaBundleVersion.bundleType}-$JAVA_LTS_VERSION-${zuluData.zuluVersion}";
       if (dockerImageTags.contains(versionTag)) {
         // image already exists
         if (FORCE_BUILDS) {
@@ -67,9 +67,9 @@ main(List<String> args) async {
         throw "Error, zulu version mismatch ('${first?.zuluVersion}' and '${data[arch]?.zuluVersion}')!";
     }
     var tags = [
-      "$javaBundleVersion-$JAVA_LTS_VERSION",
+      "${javaBundleVersion.bundleType}-$JAVA_LTS_VERSION",
       "latest",
-      javaBundleVersion,
+      javaBundleVersion.bundleType,
       versionTag!,
     ];
     await dockerBuildPushRemove(tags);
@@ -80,7 +80,7 @@ main(List<String> args) async {
 /// Data object for the zulu api response
 /// Azul API documentation:
 /// https://app.swaggerhub.com/domains-docs/azul/zulu-download-api-shared/1.0#/components/pathitems/Bundles/get
-Future<ZuluData> getZuluData({required String bundle_type, required String arch, int java_version = JAVA_LTS_VERSION, int hw_bitness = HARDWARE_BITNESS}) async {
+Future<ZuluData> getZuluData({required String features, required String arch, int java_version = JAVA_LTS_VERSION, int hw_bitness = HARDWARE_BITNESS}) async {
   // Example url:
   // https://api.azul.com/zulu/download/community/v1.0/bundles/latest/?os=linux_musl&arch=arm&hw_bitness=64&bundle_type=jre&ext=&java_version=17&features=headfull
   var uri = Uri(
@@ -91,9 +91,8 @@ Future<ZuluData> getZuluData({required String bundle_type, required String arch,
       "os": "linux_musl", // alpine linux
       "arch": arch,
       "hw_bitness": hw_bitness.toString(),
-      "bundle_type": bundle_type,
       "java_version": java_version.toString(),
-      "features": "headfull"
+      "features": features,
     },
   );
   //print(uri);
@@ -290,3 +289,17 @@ class Architectures {
   static const arm64 = Architectures._("arm", "arm64");
   static const x86_64 = Architectures._("x86", "amd64");
 }
+
+class JavaBundleVersions {
+  final String bundleType;
+  final String zuluString;
+
+  const JavaBundleVersions._(this.bundleType, this.zuluString);
+
+  static const jdk = Architectures._("jdk", "jdk");
+  static const jre = Architectures._("jdk", "headful");
+
+  @override
+  String toString() => bundleType;
+}
+
