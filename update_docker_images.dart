@@ -68,10 +68,12 @@ main(List<String> args) async {
     }
     var tags = [
       "${javaBundleVersion.bundleType}-$JAVA_LTS_VERSION",
-      "latest",
       javaBundleVersion.bundleType,
       versionTag!,
     ];
+    if (javaBundleVersion == JavaBundleVersions.jre) {
+      tags.add("latest");
+    }
     await dockerBuildPushRemove(tags);
     print("[$versionTag] Built, pushed and cleaned up successfully!");
   }
@@ -296,8 +298,8 @@ class JavaBundleVersions {
 
   const JavaBundleVersions._(this.bundleType, this.zuluString);
 
-  static const jdk = Architectures._("jdk", "jdk");
-  static const jre = Architectures._("jdk", "headful");
+  static const jdk = JavaBundleVersions._("jdk", "jdk");
+  static const jre = JavaBundleVersions._("jre", "headful");
 
   @override
   String toString() => bundleType;
