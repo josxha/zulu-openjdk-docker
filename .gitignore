@@ -22,4 +22,4 @@ doc/api/
 
 # custom rules
 .idea/
-Dockerfile.complete
+openjdk-*.tar.gz

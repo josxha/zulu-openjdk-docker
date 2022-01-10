@@ -57,7 +57,7 @@ main(List<String> args) async {
       var response = await get(Uri.parse(data[arch]!.url));
       if (response.statusCode != 200)
         throw "Couldn't download ${zuluData.name}\n${response.body}";
-      await File("openjdk-${arch}.tar.gz").writeAsBytes(response.bodyBytes);
+      await File("openjdk-${arch.docker}.tar.gz").writeAsBytes(response.bodyBytes);
     }
 
     // test if the version numbers are the same for every arch
