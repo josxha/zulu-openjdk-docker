@@ -72,8 +72,7 @@ main(List<String> args) async {
       javaBundleVersion,
       versionTag!,
     ];
-    var archsFull = OS_ARCHITECTURES.map((var arch) => arch.dockerFull).toList();
-    await dockerBuildPushRemove(tags, archsFull);
+    await dockerBuildPushRemove(tags);
     print("[$versionTag] Built, pushed and cleaned up successfully!");
   }
 }
@@ -109,57 +108,26 @@ Future<ZuluData> getZuluData({required String bundle_type, required String arch,
   }
 }
 
-Future<void> dockerBuildPushRemove(List<String> tags, List<String> archsFull) async {
-  var taskResult = dockerBuild(tags, archsFull);
-  if (taskResult.exitCode != 0) {
-    print(taskResult.stdout);
-    print(taskResult.stderr);
-    throw Exception("Couldn't run docker build for $tags.");
-  }
-  for (var tag in tags) {
-    taskResult = dockerPush(tag);
-    if (taskResult.exitCode != 0) {
-      print(taskResult.stdout);
-      print(taskResult.stderr);
-      throw Exception("Couldn't run docker push for $tag.");
-    }
-    taskResult = dockerRemove(tag);
-    if (taskResult.exitCode != 0) {
-      print(taskResult.stdout);
-      print(taskResult.stderr);
-      throw Exception("Couldn't run docker remove image for $tag.");
-    }
-  }
-}
-
-ProcessResult dockerBuild(List<String> tags, List<String> archs) {
-  var args = ["buildx", "build", "-f", "Dockerfile.complete", "."];
-  args.add("--platform");
-  args.add(archs.join(","));
+Future<void> dockerBuildPushRemove(List<String> tags) async {
+  var args = [
+    "buildx", "build",
+    "-f", "Dockerfile.complete", ".",
+    DRY_RUN ? "--load" : "--push",
+    "--platform",
+  ];
+  args.add(OS_ARCHITECTURES.map((var arch) => arch.dockerFull).toList().join(","));
   for (var tag in tags) {
     args.addAll([
       "--tag",
       "josxha/zulu-openjdk:$tag",
     ]);
   }
-  return Process.runSync("docker", args);
-}
-
-ProcessResult dockerRemove(String tag) {
-  return Process.runSync("docker", [
-    "rmi",
-    "josxha/zulu-openjdk:$tag",
-  ]);
-}
-
-ProcessResult dockerPush(String tag) {
-  if (DRY_RUN) {
-    return ProcessResult(12345, 0, "Dry run. Skip push to container registry.", "");
+  var taskResult = Process.runSync("docker", args);
+  if (taskResult.exitCode != 0) {
+    print(taskResult.stdout);
+    print(taskResult.stderr);
+    throw Exception("Couldn't run docker build for $tags.");
   }
-  return Process.runSync("docker", [
-    "push",
-    "josxha/zulu-openjdk:$tag",
-  ]);
 }
 
 Future<List<String>> getDockerImageTags() async {
