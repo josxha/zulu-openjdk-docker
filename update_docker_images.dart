@@ -110,8 +110,7 @@ Future<ZuluData> getZuluData({required String bundle_type, required String arch,
 
 Future<void> dockerBuildPushRemove(List<String> tags) async {
   var args = [
-    "buildx", "build",
-    "-f", "Dockerfile.complete", ".",
+    "buildx", "build", ".",
     DRY_RUN ? "--load" : "--push",
     "--platform",
   ];
