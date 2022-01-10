@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:http/http.dart';
 
-const JAVA_TLS_VERSION = 17; // arm64 builds only available for openjdk17
+const JAVA_LTS_VERSION = 17; // arm64 builds only available for openjdk17
 const HARDWARE_BITNESS = 64; // only builds for 64bit
 // headless version not available for arm64
 // https://docs.azul.com/core/zulu-openjdk/supported-platforms
@@ -30,44 +30,47 @@ main(List<String> args) async {
   var dockerImageTags = await getDockerImageTags();
 
   for (var javaBundleVersion in JAVA_BUNDLE_VERSIONS) {
-    List<Future<ZuluData>> futures = [];
+    String? versionTag;
+    Map<Architectures, ZuluData> data = {};
     for (var arch in OS_ARCHITECTURES) {
-      futures.add(getZuluData(
+      var zuluData = await getZuluData(
         bundle_type: javaBundleVersion,
         arch: arch.zulu,
-      ));
-    }
-    List<ZuluData> zuluDataList = await Future.wait(futures);
-    var zuluDataX86 = zuluDataList[0];
-    var zuluDataArm = zuluDataList[1];
+      );
+      data[arch] = zuluData;
 
-    print("[$javaBundleVersion-$JAVA_TLS_VERSION] Check if the docker image for $javaBundleVersion needs to get updated...");
-    String versionTag = "$javaBundleVersion-$JAVA_TLS_VERSION-${zuluDataX86.zuluVersion}";
-    if (dockerImageTags.contains(versionTag)) {
-      // image already exists
-      if (FORCE_BUILDS) {
-        print("[$versionTag] Image exists but force update enabled.");
-      } else {
-        print("[$versionTag] Image exists, skip build.");
-        continue;
+      print("[$javaBundleVersion-$JAVA_LTS_VERSION] Check if the docker image for $javaBundleVersion needs to get updated...");
+      versionTag = "$javaBundleVersion-$JAVA_LTS_VERSION-${zuluData.zuluVersion}";
+      if (dockerImageTags.contains(versionTag)) {
+        // image already exists
+        if (FORCE_BUILDS) {
+          print("[$versionTag] Image exists but force update enabled.");
+        } else {
+          print("[$versionTag] Image exists, skip build.");
+          continue;
+        }
       }
-    }
 
-    // image doesn't exist yet
-    print("[$versionTag] Build and push image");
-    // download openJDK archives
-    for (var zuluData in zuluDataList) {
-      var response = await get(Uri.parse(zuluData.url));
+      // image doesn't exist yet
+      print("[$versionTag] Build and push image");
+      // download openJDK archives
+      var response = await get(Uri.parse(data[arch]!.url));
       if (response.statusCode != 200)
         throw "Couldn't download ${zuluData.name}\n${response.body}";
-      await File(zuluData.name).writeAsBytes(response.bodyBytes);
+      await File("openjdk-${arch}.tar.gz").writeAsBytes(response.bodyBytes);
     }
 
+    // test if the version numbers are the same for every arch
+    var first = data[OS_ARCHITECTURES.first];
+    for (var arch in OS_ARCHITECTURES.sublist(1)) {
+      if (data[arch]?.zuluVersion != first?.zuluVersion)
+        throw "Error, zulu version mismatch ('${first?.zuluVersion}' and '${data[arch]?.zuluVersion}')!";
+    }
     var tags = [
-      "$javaBundleVersion-$JAVA_TLS_VERSION",
+      "$javaBundleVersion-$JAVA_LTS_VERSION",
       "latest",
       javaBundleVersion,
-      versionTag,
+      versionTag!,
     ];
     var archsFull = OS_ARCHITECTURES.map((var arch) => arch.dockerFull).toList();
     await dockerBuildPushRemove(tags, archsFull);
@@ -78,7 +81,7 @@ main(List<String> args) async {
 /// Data object for the zulu api response
 /// Azul API documentation:
 /// https://app.swaggerhub.com/domains-docs/azul/zulu-download-api-shared/1.0#/components/pathitems/Bundles/get
-Future<ZuluData> getZuluData({required String bundle_type, required String arch, int java_version = JAVA_TLS_VERSION, int hw_bitness = HARDWARE_BITNESS}) async {
+Future<ZuluData> getZuluData({required String bundle_type, required String arch, int java_version = JAVA_LTS_VERSION, int hw_bitness = HARDWARE_BITNESS}) async {
   // Example url:
   // https://api.azul.com/zulu/download/community/v1.0/bundles/latest/?os=linux_musl&arch=arm&hw_bitness=64&bundle_type=jre&ext=&java_version=17&features=headfull
   var uri = Uri(
