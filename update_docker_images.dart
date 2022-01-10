@@ -102,7 +102,7 @@ Future<ZuluData> getZuluData({required String bundle_type, required String arch,
     case 200:
       return ZuluData.parse(jsonDecode(response.body));
     case 404:
-      throw "No Build available with that specification (404).";
+      throw "No Build available with that specification (404).\n$uri";
     default:
       throw "Error, received status code ${response.statusCode} from azul api.\n${response.body}";
   }
@@ -121,6 +121,8 @@ Future<void> dockerBuildPushRemove(List<String> tags) async {
       "josxha/zulu-openjdk:$tag",
     ]);
   }
+  if (DRY_RUN)
+    return;
   var taskResult = Process.runSync("docker", args);
   if (taskResult.exitCode != 0) {
     print(taskResult.stdout);
