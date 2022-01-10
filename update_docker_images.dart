@@ -7,7 +7,7 @@ const HARDWARE_BITNESS = 64; // only builds for 64bit
 // headless version not available for arm64
 // https://docs.azul.com/core/zulu-openjdk/supported-platforms
 const JAVA_BUNDLE_VERSIONS = ["jre", "jdk"];
-const OS_ARCHITECTURES = ["x86", "arm"];
+const OS_ARCHITECTURES = [Architectures.x86_64, Architectures.arm64];
 const DOCKER_TAG_API = "https://registry.hub.docker.com/v1/repositories/josxha/zulu-openjdk/tags";
 
 bool DRY_RUN = false;
@@ -34,7 +34,7 @@ main(List<String> args) async {
     for (var arch in OS_ARCHITECTURES) {
       futures.add(getZuluData(
         bundle_type: javaBundleVersion,
-        arch: arch,
+        arch: arch.zulu,
       ));
     }
     List<ZuluData> zuluDataList = await Future.wait(futures);
@@ -62,12 +62,6 @@ main(List<String> args) async {
         throw "Couldn't download ${zuluData.name}\n${response.body}";
       await File(zuluData.name).writeAsBytes(response.bodyBytes);
     }
-    // create Dockerfile
-    String dockerfile = await File("Dockerfile").readAsString();
-    dockerfile = dockerfile
-        .replaceFirst("{{name_x86}}", zuluDataX86.name)
-        .replaceFirst("{{name_arm}}", zuluDataArm.name);
-    await File("Dockerfile.complete").writeAsString(dockerfile);
 
     var tags = [
       "$javaBundleVersion-$JAVA_TLS_VERSION",
@@ -75,16 +69,7 @@ main(List<String> args) async {
       javaBundleVersion,
       versionTag,
     ];
-    var archsFull = OS_ARCHITECTURES.map((var arch) {
-      switch (arch) {
-        case "x86":
-          return "linux/amd64";
-        case "arm":
-          return "linux/arm64";
-        default:
-          throw "Unknown buildx --platform value for architecture '$arch'.";
-      }
-    }).toList();
+    var archsFull = OS_ARCHITECTURES.map((var arch) => arch.dockerFull).toList();
     await dockerBuildPushRemove(tags, archsFull);
     print("[$versionTag] Built, pushed and cleaned up successfully!");
   }
@@ -117,7 +102,7 @@ Future<ZuluData> getZuluData({required String bundle_type, required String arch,
     case 404:
       throw "No Build available with that specification (404).";
     default:
-      throw "Error, recieved status code ${response.statusCode} from azul api.\n${response.body}";
+      throw "Error, received status code ${response.statusCode} from azul api.\n${response.body}";
   }
 }
 
@@ -147,8 +132,7 @@ Future<void> dockerBuildPushRemove(List<String> tags, List<String> archsFull) as
 ProcessResult dockerBuild(List<String> tags, List<String> archs) {
   var args = ["buildx", "build", "-f", "Dockerfile.complete", "."];
   args.add("--platform");
-  //TODO args.add(archs.join(","));
-  args.add(archs.last);
+  args.add(archs.join(","));
   for (var tag in tags) {
     args.addAll([
       "--tag",
@@ -321,4 +305,16 @@ class ZuluData {
       support_term: json['support_term'],
     );
   }
+}
+
+class Architectures {
+  final String zulu;
+  final String docker;
+
+  String get dockerFull => "linux/$docker";
+
+  const Architectures._(this.zulu, this.docker);
+
+  static const arm64 = Architectures._("arm", "arm64");
+  static const x86_64 = Architectures._("x86", "amd64");
 }
