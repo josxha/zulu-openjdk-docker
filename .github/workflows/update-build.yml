@@ -17,8 +17,6 @@ jobs:
       - name: Set up Docker Buildx
         id: buildx
         uses: docker/setup-buildx-action@v1
-      - name: Enable BuildKit
-        run: export DOCKER_BUILDKIT=1
       - uses: dart-lang/setup-dart@v1
       - name: Install dart dependencies
         run: dart pub get
