@@ -9,15 +9,16 @@ LABEL org.opencontainers.image.source="https://github.com/josxha/zulu-openjdk-do
       org.opencontainers.image.title="Zulu OpenJDK" \
       org.opencontainers.image.description="Automatic Docker builds for Zulu OpenJDK"
 
-RUN mkdir /java
-WORKDIR /java
-
 # ARG needed for buildkit
 ARG TARGETARCH
 COPY openjdk-${TARGETARCH}.tar.gz openjdk.tar.gz
 
 # install OpenJDK
-RUN tar -xzvf openjdk.tar.gz
-RUN export PATH=/java/bin:$PATH
+RUN tar -xzvf openjdk.tar.gz; \
+    rm openjdk.tar.gz; \
+    mv zulu* /java
 
+ENV PATH="/java/bin:${PATH}"
+
+WORKDIR /java
 ENTRYPOINT ["java", "-version"]
