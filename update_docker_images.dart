@@ -3,11 +3,10 @@ import 'dart:io';
 import 'package:http/http.dart';
 
 const JAVA_LTS_VERSION = 17; // arm64 builds only available for openjdk17
-const HARDWARE_BITNESS = 64; // only builds for 64bit
 // headless version not available for arm64
 // https://docs.azul.com/core/zulu-openjdk/supported-platforms
 const List<JavaBundleVersions> JAVA_BUNDLE_VERSIONS = [JavaBundleVersions.jre, JavaBundleVersions.jdk];
-const OS_ARCHITECTURES = [Architectures.amd64, Architectures.arm64];
+const OPERATING_SYSTEMS = [OperatingSystem.linux_musl_amd64, OperatingSystem.linux_arm64];
 const DOCKER_TAG_API = "https://registry.hub.docker.com/v1/repositories/josxha/zulu-openjdk/tags";
 
 bool DRY_RUN = false;
@@ -31,15 +30,15 @@ main(List<String> args) async {
 
   for (var javaBundleVersion in JAVA_BUNDLE_VERSIONS) {
     String? imageTag;
-    Map<Architectures, ZuluData> data = {};
-    for (var arch in OS_ARCHITECTURES) {
+    Map<OperatingSystem, ZuluData> data = {};
+    for (var os in OPERATING_SYSTEMS) {
       var zuluData = await getZuluData(
         features: javaBundleVersion.zuluString,
-        arch: arch.zulu,
+        os: os,
       );
-      data[arch] = zuluData;
+      data[os] = zuluData;
 
-      imageTag = "${javaBundleVersion.bundleType}-$JAVA_LTS_VERSION-${zuluData.zuluVersion}-${arch.docker}";
+      imageTag = "${javaBundleVersion.bundleType}-$JAVA_LTS_VERSION-${zuluData.zuluVersion}-${os.arch.docker}";
       print("[$imageTag] Check if the image is up to date...");
       if (dockerImageTags.contains(imageTag)) {
         // image already exists
@@ -54,12 +53,12 @@ main(List<String> args) async {
       // image doesn't exist yet, build arch specific image
       print("[$imageTag] Build and push image");
       // download openJDK archives
-      var response = await get(Uri.parse(data[arch]!.url));
-      print("downloading file from ${data[arch]!.url}");
+      var response = await get(Uri.parse(zuluData.url));
+      print("downloading file from ${zuluData.url}");
       if (response.statusCode != 200)
         throw "Couldn't download ${zuluData.name}\n${response.body}";
-      await File("openjdk-${arch.docker}.tar.gz").writeAsBytes(response.bodyBytes);
-      await dockerBuildAndPush(imageTag, arch);
+      await File("openjdk-${os.arch.docker}.tar.gz").writeAsBytes(response.bodyBytes);
+      await dockerBuildAndPush(imageTag, os.arch);
       dockerImageTags.add(imageTag);
     }
 
@@ -80,7 +79,7 @@ main(List<String> args) async {
 /// Data object for the zulu api response
 /// Azul API documentation:
 /// https://app.swaggerhub.com/domains-docs/azul/zulu-download-api-shared/1.0#/components/pathitems/Bundles/get
-Future<ZuluData> getZuluData({required String features, required String arch, int java_version = JAVA_LTS_VERSION, int hw_bitness = HARDWARE_BITNESS}) async {
+Future<ZuluData> getZuluData({required String features, required OperatingSystem os, int java_version = JAVA_LTS_VERSION}) async {
   // Example url:
   // https://api.azul.com/zulu/download/community/v1.0/bundles/latest/?os=linux_musl&arch=arm&hw_bitness=64&bundle_type=jre&ext=&java_version=17&features=headfull
   var uri = Uri(
@@ -88,9 +87,9 @@ Future<ZuluData> getZuluData({required String features, required String arch, in
     host: "api.azul.com",
     path: "zulu/download/community/v1.0/bundles/latest",
     queryParameters: {
-      "os": "linux_musl", // alpine linux
-      "arch": arch,
-      "hw_bitness": hw_bitness.toString(),
+      "os": os.name,
+      "arch": os.arch.zulu,
+      "hw_bitness": os.bitness.toString(),
       "java_version": java_version.toString(),
       "features": features,
     },
@@ -107,7 +106,7 @@ Future<ZuluData> getZuluData({required String features, required String arch, in
   }
 }
 
-Future<void> dockerBuildAndPush(String imageTag, Architectures architecture) async {
+Future<void> dockerBuildAndPush(String imageTag, Architecture architecture) async {
   var args = [
     "buildx", "build", ".",
     "--push",
@@ -273,16 +272,27 @@ class ZuluData {
   }
 }
 
-class Architectures {
+class Architecture {
   final String zulu;
   final String docker;
 
   String get dockerFull => "linux/$docker";
 
-  const Architectures._(this.zulu, this.docker);
+  const Architecture._(this.zulu, this.docker);
 
-  static const arm64 = Architectures._("arm", "arm64");
-  static const amd64 = Architectures._("x86", "amd64");
+  static const arm64 = Architecture._("arm", "arm64");
+  static const amd64 = Architecture._("x86", "amd64");
+}
+
+class OperatingSystem {
+  final Architecture arch;
+  final String name;
+  final int bitness;
+  
+  const OperatingSystem._(this.name, this.arch, this.bitness);
+  
+  static const linux_musl_amd64 = OperatingSystem._("linux_musl", Architecture.amd64, 64); // alpine linux
+  static const linux_arm64 = OperatingSystem._("linux", Architecture.arm64, 64);
 }
 
 class JavaBundleVersions {
@@ -297,4 +307,3 @@ class JavaBundleVersions {
   @override
   String toString() => bundleType;
 }
-
