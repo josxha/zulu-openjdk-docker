@@ -292,7 +292,7 @@ class OperatingSystem {
   const OperatingSystem._(this.name, this.arch, this.bitness);
   
   static const linux_musl_amd64 = OperatingSystem._("linux_musl", Architecture.amd64, 64); // alpine linux
-  static const linux_arm64 = OperatingSystem._("linux", Architecture.arm64, 64);
+  static const linux_arm64 = OperatingSystem._("linux_glibc", Architecture.arm64, 64);
 }
 
 class JavaBundleVersions {
