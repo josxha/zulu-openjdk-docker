@@ -55,6 +55,7 @@ main(List<String> args) async {
       print("[$imageTag] Build and push image");
       // download openJDK archives
       var response = await get(Uri.parse(data[arch]!.url));
+      print("downloading file from ${data[arch]!.url}");
       if (response.statusCode != 200)
         throw "Couldn't download ${zuluData.name}\n${response.body}";
       await File("openjdk-${arch.docker}.tar.gz").writeAsBytes(response.bodyBytes);
