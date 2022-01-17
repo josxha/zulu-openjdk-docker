@@ -1,7 +1,5 @@
-# Template Dockerfile, update_docker_images.dart replaces {{variable_name}} with its values
-# Using buildx buildkit for multi arch images
-
-FROM alpine:latest AS base
+# alpine not possible because of missing dependencies with sqlite
+FROM ubuntu:latest
 LABEL org.opencontainers.image.source="https://github.com/josxha/zulu-openjdk-docker" \
       org.opencontainers.image.authors="https://github.com/josxha" \
       org.opencontainers.image.url="https://hub.docker.com/r/josxha/zulu-openjdk" \
@@ -9,12 +7,7 @@ LABEL org.opencontainers.image.source="https://github.com/josxha/zulu-openjdk-do
       org.opencontainers.image.title="Zulu OpenJDK" \
       org.opencontainers.image.description="Automatic Docker builds for Zulu OpenJDK"
 
-# install dependencies
-RUN apk add java-common libxau libmd libbsd libxdmcp libxcb libx11 libxext libxi libxrender libxtst alsa-lib
-
-# ARG needed for buildkit
-ARG TARGETARCH
-COPY openjdk-${TARGETARCH}.tar.gz openjdk.tar.gz
+COPY openjdk-arm64.tar.gz openjdk.tar.gz
 
 # install OpenJDK
 RUN tar -xzvf openjdk.tar.gz; \

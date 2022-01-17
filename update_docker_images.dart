@@ -7,7 +7,7 @@ const HARDWARE_BITNESS = 64; // only builds for 64bit
 // headless version not available for arm64
 // https://docs.azul.com/core/zulu-openjdk/supported-platforms
 const List<JavaBundleVersions> JAVA_BUNDLE_VERSIONS = [JavaBundleVersions.jre, JavaBundleVersions.jdk];
-const OS_ARCHITECTURES = [Architectures.x86_64, Architectures.arm64];
+const OS_ARCHITECTURES = [Architectures.amd64, Architectures.arm64];
 const DOCKER_TAG_API = "https://registry.hub.docker.com/v1/repositories/josxha/zulu-openjdk/tags";
 
 bool DRY_RUN = false;
@@ -30,7 +30,7 @@ main(List<String> args) async {
   var dockerImageTags = await getDockerImageTags();
 
   for (var javaBundleVersion in JAVA_BUNDLE_VERSIONS) {
-    String? versionTag;
+    String? imageTag;
     Map<Architectures, ZuluData> data = {};
     for (var arch in OS_ARCHITECTURES) {
       var zuluData = await getZuluData(
@@ -39,43 +39,40 @@ main(List<String> args) async {
       );
       data[arch] = zuluData;
 
-      print("[${javaBundleVersion.bundleType}-$JAVA_LTS_VERSION] Check if the docker image for ${javaBundleVersion.bundleType} needs to get updated...");
-      versionTag = "${javaBundleVersion.bundleType}-$JAVA_LTS_VERSION-${zuluData.zuluVersion}";
-      if (dockerImageTags.contains(versionTag)) {
+      imageTag = "${javaBundleVersion.bundleType}-$JAVA_LTS_VERSION-${zuluData.zuluVersion}-${arch.docker}";
+      print("[$imageTag] Check if the image is up to date...");
+      if (dockerImageTags.contains(imageTag)) {
         // image already exists
         if (FORCE_BUILDS) {
-          print("[$versionTag] Image exists but force update enabled.");
+          print("[$imageTag] Image exists but force update enabled.");
         } else {
-          print("[$versionTag] Image exists, skip build.");
+          print("[$imageTag] Image exists, skip build.");
           continue;
         }
       }
 
-      // image doesn't exist yet
-      print("[$versionTag] Build and push image");
+      // image doesn't exist yet, build arch specific image
+      print("[$imageTag] Build and push image");
       // download openJDK archives
       var response = await get(Uri.parse(data[arch]!.url));
       if (response.statusCode != 200)
         throw "Couldn't download ${zuluData.name}\n${response.body}";
       await File("openjdk-${arch.docker}.tar.gz").writeAsBytes(response.bodyBytes);
+      await dockerBuildAndPush(imageTag, arch);
+      dockerImageTags.add(imageTag);
     }
 
-    // test if the version numbers are the same for every arch
-    var first = data[OS_ARCHITECTURES.first];
-    for (var arch in OS_ARCHITECTURES.sublist(1)) {
-      if (data[arch]?.zuluVersion != first?.zuluVersion)
-        throw "Error, zulu version mismatch ('${first?.zuluVersion}' and '${data[arch]?.zuluVersion}')!";
-    }
+    // build multi arch image
     var tags = [
       "${javaBundleVersion.bundleType}-$JAVA_LTS_VERSION",
       javaBundleVersion.bundleType,
-      versionTag!,
+      imageTag!,
     ];
     if (javaBundleVersion == JavaBundleVersions.jre) {
       tags.add("latest");
     }
-    await dockerBuildPushRemove(tags);
-    print("[$versionTag] Built, pushed and cleaned up successfully!");
+    // TODO push multi arch image
+    print("[$imageTag] Built, pushed and cleaned up successfully!");
   }
 }
 
@@ -109,26 +106,21 @@ Future<ZuluData> getZuluData({required String features, required String arch, in
   }
 }
 
-Future<void> dockerBuildPushRemove(List<String> tags) async {
+Future<void> dockerBuildAndPush(String imageTag, Architectures architecture) async {
   var args = [
     "buildx", "build", ".",
     "--push",
-    "--platform",
+    "-f", "Dockerfile.${architecture.docker}",
+    "--platform", architecture.dockerFull,
+    "--tag", "josxha/zulu-openjdk:$imageTag",
   ];
-  args.add(OS_ARCHITECTURES.map((var arch) => arch.dockerFull).toList().join(","));
-  for (var tag in tags) {
-    args.addAll([
-      "--tag",
-      "josxha/zulu-openjdk:$tag",
-    ]);
-  }
   if (DRY_RUN)
     return;
   var taskResult = Process.runSync("docker", args);
   if (taskResult.exitCode != 0) {
     print(taskResult.stdout);
     print(taskResult.stderr);
-    throw Exception("Couldn't run docker build for $tags.");
+    throw Exception("Couldn't run docker build for $imageTag.");
   }
 }
 
@@ -289,7 +281,7 @@ class Architectures {
   const Architectures._(this.zulu, this.docker);
 
   static const arm64 = Architectures._("arm", "arm64");
-  static const x86_64 = Architectures._("x86", "amd64");
+  static const amd64 = Architectures._("x86", "amd64");
 }
 
 class JavaBundleVersions {
