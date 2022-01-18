@@ -6,7 +6,7 @@ const JAVA_LTS_VERSION = 17; // arm64 builds only available for openjdk17
 // headless version not available for arm64
 // https://docs.azul.com/core/zulu-openjdk/supported-platforms
 const List<JavaBundleVersions> JAVA_BUNDLE_VERSIONS = [JavaBundleVersions.jre, JavaBundleVersions.jdk];
-const OPERATING_SYSTEMS = [OperatingSystem.linux_musl_amd64, OperatingSystem.linux_arm64];
+const OPERATING_SYSTEMS = [OperatingSystem.linux_arm64];
 const DOCKER_TAG_API = "https://registry.hub.docker.com/v1/repositories/josxha/zulu-openjdk/tags";
 
 bool DRY_RUN = false;
@@ -57,6 +57,7 @@ main(List<String> args) async {
       print("downloading file from ${zuluData.url}");
       if (response.statusCode != 200)
         throw "Couldn't download ${zuluData.name}\n${response.body}";
+      print(response.body); // TODO remove
       await File("openjdk-${os.arch.docker}.tar.gz").writeAsBytes(response.bodyBytes);
       await dockerBuildAndPush(imageTag, os.arch);
       dockerImageTags.add(imageTag);
