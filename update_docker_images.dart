@@ -79,16 +79,13 @@ main(List<String> args) async {
           }
           if (allArchExist) {
             // build multi arch image
-            var tags = [
-              "${javaBundleVersion.bundleType}-$JAVA_LTS_VERSION",
-              javaBundleVersion.bundleType,
-              multiArchImageTag,
-            ];
+            var fromImageTags = OPERATING_SYSTEMS.map((os) => "$multiArchImageTag-${os.arch.docker}").toList()
+            await dockerCreateAndPushManifest(multiArchImageTag, fromImageTags);
+            await dockerCreateAndPushManifest("${javaBundleVersion.bundleType}-$JAVA_LTS_VERSION", fromImageTags);
+            await dockerCreateAndPushManifest(javaBundleVersion.bundleType, fromImageTags);
             if (javaBundleVersion == JavaBundleVersions.jre) {
-              tags.add("latest");
+              await dockerCreateAndPushManifest("latest", fromImageTags);
             }
-            // TODO push multi arch image
-            await dockerCreateAndPushManifest(multiArchImageTag);
           }
         }
       }
@@ -97,17 +94,15 @@ main(List<String> args) async {
   }
 }
 
-Future<void> dockerCreateAndPushManifest(String imageTag) async {
+Future<void> dockerCreateAndPushManifest(String imageTag, List<String> fromImageTags) async {
   //create manifest
   var args = [
     "manifest", "create",
     "josxha/zulu-openjdk:$imageTag",
   ];
-  for (var os in OPERATING_SYSTEMS) {
-    var archImageTag = "$imageTag-${os.arch.docker}";
-    args.addAll(["--amend", "josxha/zulu-openjdk:$archImageTag"]);
+  for (var fromImageTag in fromImageTags) {
+    args.addAll(["--amend", "josxha/zulu-openjdk:$fromImageTag"]);
   }
-  print(args);
   var result = await Process.run("docker", args);
   if (result.exitCode != 0) {
     print(result.stdout);
