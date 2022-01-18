@@ -66,8 +66,8 @@ main(List<String> args) async {
     for (var dockerImageTag in dockerImageTags) {
       var list = dockerImageTag.split("-");
       // check if it is a arch specific image
-      if (list.length == 3 && list.last == OPERATING_SYSTEMS.first.arch.docker) {
-        var multiArchImageTag = dockerImageTag.substring(0, dockerImageTag.lastIndexOf("-") - 1);
+      if (list.length == 4 && list.last == OPERATING_SYSTEMS.first.arch.docker) {
+        var multiArchImageTag = dockerImageTag.substring(0, dockerImageTag.lastIndexOf("-"));
         // check if a multi arch image already exists
         if (!dockerImageTags.contains(multiArchImageTag)) {
           // check if images of all other architectures exist
