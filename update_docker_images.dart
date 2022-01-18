@@ -63,16 +63,65 @@ main(List<String> args) async {
     }
 
     // build multi arch image
-    var tags = [
-      "${javaBundleVersion.bundleType}-$JAVA_LTS_VERSION",
-      javaBundleVersion.bundleType,
-      imageTag!,
-    ];
-    if (javaBundleVersion == JavaBundleVersions.jre) {
-      tags.add("latest");
+    for (var dockerImageTag in dockerImageTags) {
+      var list = dockerImageTag.split("-");
+      // check if it is a arch specific image
+      if (list.length == 3 && list.last == OPERATING_SYSTEMS.first.arch.docker) {
+        var multiArchImageTag = dockerImageTag.substring(0, dockerImageTag.lastIndexOf("-") - 1);
+        // check if a multi arch image already exists
+        if (!dockerImageTags.contains(multiArchImageTag)) {
+          // check if images of all other architectures exist
+          var allArchExist = true;
+          for (var os in OPERATING_SYSTEMS.sublist(1)) {
+            if (!dockerImageTags.contains("$multiArchImageTag-${os.arch.docker}")) {
+              allArchExist = false;
+            }
+          }
+          if (allArchExist) {
+            // build multi arch image
+            var tags = [
+              "${javaBundleVersion.bundleType}-$JAVA_LTS_VERSION",
+              javaBundleVersion.bundleType,
+              multiArchImageTag,
+            ];
+            if (javaBundleVersion == JavaBundleVersions.jre) {
+              tags.add("latest");
+            }
+            // TODO push multi arch image
+            await dockerCreateAndPushManifest(multiArchImageTag);
+          }
+        }
+      }
     }
-    // TODO push multi arch image
     print("[$imageTag] Built, pushed and cleaned up successfully!");
+  }
+}
+
+Future<void> dockerCreateAndPushManifest(String imageTag) async {
+  //create manifest
+  var args = [
+    "manifest", "create",
+    "josxha/zulu-openjdk:$imageTag",
+  ];
+  for (var os in OPERATING_SYSTEMS) {
+    var archImageTag = "$imageTag-${os.arch.docker}";
+    args.addAll(["--amend ", "josxha/zulu-openjdk:$archImageTag"]);
+  }
+  var result = await Process.run("docker", args);
+  if (result.exitCode != 0) {
+    print(result.stdout);
+    print(result.stderr);
+    throw "Couldn't create docker manifest.";
+  }
+  // push the manifest
+  result = await Process.run("docker", [
+    "manifest", "push",
+    "josxha/zulu-openjdk:$imageTag",
+  ]);
+  if (result.exitCode != 0) {
+    print(result.stdout);
+    print(result.stderr);
+    throw "Couldn't push docker manifest.";
   }
 }
 
