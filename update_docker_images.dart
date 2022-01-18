@@ -79,7 +79,7 @@ main(List<String> args) async {
           }
           if (allArchExist) {
             // build multi arch image
-            var fromImageTags = OPERATING_SYSTEMS.map((os) => "$multiArchImageTag-${os.arch.docker}").toList()
+            var fromImageTags = OPERATING_SYSTEMS.map((os) => "$multiArchImageTag-${os.arch.docker}").toList();
             await dockerCreateAndPushManifest(multiArchImageTag, fromImageTags);
             await dockerCreateAndPushManifest("${javaBundleVersion.bundleType}-$JAVA_LTS_VERSION", fromImageTags);
             await dockerCreateAndPushManifest(javaBundleVersion.bundleType, fromImageTags);
