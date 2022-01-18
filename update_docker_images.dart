@@ -58,7 +58,6 @@ main(List<String> args) async {
       if (response.statusCode != 200)
         throw "Couldn't download ${zuluData.name}\n${response.body}";
       await File("openjdk-${os.arch.docker}.tar.gz").writeAsBytes(response.bodyBytes);
-      //Process.runSync("tar", ["-xzvf" , "openjdk-${os.arch.docker}.tar.gz"]);
       await dockerBuildAndPush(imageTag, os.arch);
       dockerImageTags.add(imageTag);
     }
