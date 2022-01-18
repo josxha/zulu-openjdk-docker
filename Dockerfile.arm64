@@ -10,8 +10,8 @@ LABEL org.opencontainers.image.source="https://github.com/josxha/zulu-openjdk-do
 COPY openjdk-arm64.tar.gz openjdk.tar.gz
 
 # install OpenJDK
-RUN tar -xzvf openjdk.tar.gz && \
-    rm openjdk.tar.gz && \
+RUN tar -xzvf openjdk.tar.gz; \
+    rm openjdk.tar.gz; \
     mv zulu* /java
 
 ENV PATH="/java/bin:${PATH}"
