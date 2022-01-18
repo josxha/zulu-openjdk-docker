@@ -105,8 +105,9 @@ Future<void> dockerCreateAndPushManifest(String imageTag) async {
   ];
   for (var os in OPERATING_SYSTEMS) {
     var archImageTag = "$imageTag-${os.arch.docker}";
-    args.addAll(["--amend ", "josxha/zulu-openjdk:$archImageTag"]);
+    args.addAll(["--amend", "josxha/zulu-openjdk:$archImageTag"]);
   }
+  print(args);
   var result = await Process.run("docker", args);
   if (result.exitCode != 0) {
     print(result.stdout);
