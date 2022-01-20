@@ -7,7 +7,7 @@ const JAVA_LTS_VERSION = 17; // arm64 builds only available for openjdk17
 // https://docs.azul.com/core/zulu-openjdk/supported-platforms
 const List<JavaBundleVersions> JAVA_BUNDLE_VERSIONS = [JavaBundleVersions.jre, JavaBundleVersions.jdk];
 const OPERATING_SYSTEMS = [OperatingSystem.linux_musl_amd64, OperatingSystem.linux_arm64];
-const DOCKER_TAG_API = "https://registry.hub.docker.com/v2/repositories/josxha/zulu-openjdk/tags";
+const DOCKER_TAG_API = "https://registry.hub.docker.com/v2/repositories/josxha/zulu-openjdk/tags?page=";
 
 bool DRY_RUN = false;
 bool FORCE_BUILDS = false;
@@ -171,9 +171,17 @@ Future<void> dockerBuildAndPush(String imageTag, Architecture architecture) asyn
 }
 
 Future<List<String>> getDockerImageTags() async {
-  var response = await get(Uri.parse(DOCKER_TAG_API));
-  var jsonList = jsonDecode(response.body)["results"] as List;
-  return jsonList.map((listElement) => listElement["name"] as String).toList();
+  List<String> tags = [];
+  int page = 1;
+  while (true) {
+    var response = await get(Uri.parse("$DOCKER_TAG_API$page"));
+    Map<String, dynamic> json = jsonDecode(response.body);
+    var jsonList = json["results"] as List;
+    tags.addAll(jsonList.map((listElement) => listElement["name"] as String).toList());
+    if (json['next'] == null)
+      break;
+  }
+  return tags;
 }
 
 class ZuluData {
