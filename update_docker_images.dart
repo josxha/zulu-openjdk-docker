@@ -182,6 +182,7 @@ Future<List<String>> getDockerImageTags() async {
     tags.addAll(jsonList.map((listElement) => listElement["name"] as String).toList());
     if (json['next'] == null)
       break;
+    page++;
   }
   return tags;
 }
