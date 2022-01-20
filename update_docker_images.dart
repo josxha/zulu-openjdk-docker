@@ -174,9 +174,11 @@ Future<List<String>> getDockerImageTags() async {
   List<String> tags = [];
   int page = 1;
   while (true) {
-    var response = await get(Uri.parse("$DOCKER_TAG_API$page"));
+    var uri = Uri.parse("$DOCKER_TAG_API$page");
+    print(uri);
+    var response = await get(uri);
     Map<String, dynamic> json = jsonDecode(response.body);
-    var jsonList = json["results"] as List;
+    List jsonList = json["results"];
     tags.addAll(jsonList.map((listElement) => listElement["name"] as String).toList());
     if (json['next'] == null)
       break;
