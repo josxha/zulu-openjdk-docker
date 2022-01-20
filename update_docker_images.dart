@@ -137,6 +137,7 @@ Future<ZuluData> getZuluData({required String features, required OperatingSystem
       "hw_bitness": os.bitness.toString(),
       "java_version": java_version.toString(),
       "features": features,
+      "ext": "tar.gz",
     },
   );
   //print(uri);
