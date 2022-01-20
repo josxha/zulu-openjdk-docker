@@ -140,7 +140,7 @@ Future<ZuluData> getZuluData({required String features, required OperatingSystem
       "ext": "tar.gz",
     },
   );
-  //print(uri);
+  print(uri);
   var response = await get(uri);
   switch (response.statusCode) {
     case 200:
