@@ -95,6 +95,8 @@ main(List<String> args) async {
 }
 
 Future<void> dockerCreateAndPushManifest(String imageTag, List<String> fromImageTags) async {
+  print('[dockerCreateAndPushManifest] imageTag: $imageTag, fromImageTags: $fromImageTags');
+
   //create manifest
   var args = [
     "manifest", "create",
@@ -110,7 +112,6 @@ Future<void> dockerCreateAndPushManifest(String imageTag, List<String> fromImage
     throw "Couldn't create docker manifest.";
   }
   // push the manifest
-  print('docker manifest push josxha/zulu-openjdk:$imageTag');
   result = await Process.run("docker", [
     "manifest", "push",
     "josxha/zulu-openjdk:$imageTag",
