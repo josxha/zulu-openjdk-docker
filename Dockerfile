@@ -6,7 +6,7 @@ LABEL org.opencontainers.image.source="https://github.com/josxha/zulu-openjdk-do
       org.opencontainers.image.title="Zulu OpenJDK" \
       org.opencontainers.image.description="Automatic Docker builds for Zulu OpenJDK"
 
-COPY openjdk-${ARCH}.tar.gz openjdk.tar.gz
+COPY openjdk-${TARGETARCH}.tar.gz openjdk.tar.gz
 
 # install OpenJDK
 RUN tar -xzvf openjdk.tar.gz && \
