@@ -1,4 +1,4 @@
-FROM alpine:latest
+FROM ubuntu:latest
 LABEL org.opencontainers.image.source="https://github.com/josxha/zulu-openjdk-docker" \
       org.opencontainers.image.authors="https://github.com/josxha" \
       org.opencontainers.image.url="https://hub.docker.com/r/josxha/zulu-openjdk" \
@@ -6,7 +6,7 @@ LABEL org.opencontainers.image.source="https://github.com/josxha/zulu-openjdk-do
       org.opencontainers.image.title="Zulu OpenJDK" \
       org.opencontainers.image.description="Automatic Docker builds for Zulu OpenJDK"
 
-COPY openjdk-amd64.tar.gz openjdk.tar.gz
+COPY openjdk-${ARCH}.tar.gz openjdk.tar.gz
 
 # install OpenJDK
 RUN tar -xzvf openjdk.tar.gz && \
