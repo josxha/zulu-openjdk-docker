@@ -1,13 +1,21 @@
 import 'dart:convert';
 import 'dart:io';
+
 import 'package:http/http.dart';
 
 const JAVA_LTS_VERSION = 21; // arm64 builds only available for openjdk21
 // headless version not available for arm64
 // https://docs.azul.com/core/zulu-openjdk/supported-platforms
-const List<JavaBundleVersions> JAVA_BUNDLE_VERSIONS = [JavaBundleVersions.jre, JavaBundleVersions.jdk];
-const OPERATING_SYSTEMS = [OperatingSystem.linux_musl_amd64, OperatingSystem.linux_arm64];
-const DOCKER_TAG_API = "https://registry.hub.docker.com/v2/repositories/josxha/zulu-openjdk/tags?page=";
+const List<JavaBundleVersions> JAVA_BUNDLE_VERSIONS = [
+  JavaBundleVersions.jre,
+  JavaBundleVersions.jdk
+];
+const OPERATING_SYSTEMS = [
+  OperatingSystem.linux_musl_amd64,
+  OperatingSystem.linux_arm64
+];
+const DOCKER_TAG_API =
+    "https://registry.hub.docker.com/v2/repositories/josxha/zulu-openjdk/tags?page=";
 
 bool DRY_RUN = false;
 bool FORCE_BUILDS = false;
@@ -38,7 +46,8 @@ main(List<String> args) async {
       );
       data[os] = zuluData;
 
-      imageTag = "${javaBundleVersion.bundleType}-$JAVA_LTS_VERSION-${zuluData.zuluVersion}-${os.arch.docker}";
+      imageTag =
+          "${javaBundleVersion.bundleType}-$JAVA_LTS_VERSION-${zuluData.zuluVersion}-${os.arch.docker}";
       print("[$imageTag] Check if the image is up to date...");
       if (dockerImageTags.contains(imageTag)) {
         // image already exists
@@ -57,7 +66,8 @@ main(List<String> args) async {
       print("downloading file from ${zuluData.url}");
       if (response.statusCode != 200)
         throw "Couldn't download ${zuluData.name}\n${response.body}";
-      await File("openjdk-${os.arch.docker}.tar.gz").writeAsBytes(response.bodyBytes);
+      await File("openjdk-${os.arch.docker}.tar.gz")
+          .writeAsBytes(response.bodyBytes);
       await dockerBuildAndPush(imageTag, os.arch);
       dockerImageTags.add(imageTag);
     }
@@ -66,23 +76,31 @@ main(List<String> args) async {
     for (var dockerImageTag in dockerImageTags) {
       var list = dockerImageTag.split("-");
       // check if it is a arch specific image
-      if (list.length == 4 && list.last == OPERATING_SYSTEMS.first.arch.docker) {
-        var multiArchImageTag = dockerImageTag.substring(0, dockerImageTag.lastIndexOf("-"));
+      if (list.length == 4 &&
+          list.last == OPERATING_SYSTEMS.first.arch.docker) {
+        var multiArchImageTag =
+            dockerImageTag.substring(0, dockerImageTag.lastIndexOf("-"));
         // check if a multi arch image already exists
         if (!dockerImageTags.contains(multiArchImageTag)) {
           // check if images of all other architectures exist
           var allArchExist = true;
           for (var os in OPERATING_SYSTEMS.sublist(1)) {
-            if (!dockerImageTags.contains("$multiArchImageTag-${os.arch.docker}")) {
+            if (!dockerImageTags
+                .contains("$multiArchImageTag-${os.arch.docker}")) {
               allArchExist = false;
             }
           }
           if (allArchExist) {
             // build multi arch image
-            var fromImageTags = OPERATING_SYSTEMS.map((os) => "$multiArchImageTag-${os.arch.docker}").toList();
+            var fromImageTags = OPERATING_SYSTEMS
+                .map((os) => "$multiArchImageTag-${os.arch.docker}")
+                .toList();
             await dockerCreateAndPushManifest(multiArchImageTag, fromImageTags);
-            await dockerCreateAndPushManifest("${javaBundleVersion.bundleType}-$JAVA_LTS_VERSION", fromImageTags);
-            await dockerCreateAndPushManifest(javaBundleVersion.bundleType, fromImageTags);
+            await dockerCreateAndPushManifest(
+                "${javaBundleVersion.bundleType}-$JAVA_LTS_VERSION",
+                fromImageTags);
+            await dockerCreateAndPushManifest(
+                javaBundleVersion.bundleType, fromImageTags);
             if (javaBundleVersion == JavaBundleVersions.jre) {
               await dockerCreateAndPushManifest("latest", fromImageTags);
             }
@@ -94,18 +112,20 @@ main(List<String> args) async {
   }
 }
 
-Future<void> dockerCreateAndPushManifest(String imageTag, List<String> fromImageTags) async {
-  print('[dockerCreateAndPushManifest] imageTag: $imageTag, fromImageTags: $fromImageTags');
+Future<void> dockerCreateAndPushManifest(
+    String imageTag, List<String> fromImageTags) async {
+  print(
+      '[dockerCreateAndPushManifest] imageTag: $imageTag, fromImageTags: $fromImageTags');
 
   //create manifest
-  var args = [
-    "manifest", "create",
+  var result = await Process.run("docker", [
+    "buildx",
+    "imagetools",
+    "create",
+    "-t",
     "josxha/zulu-openjdk:$imageTag",
-  ];
-  for (var fromImageTag in fromImageTags) {
-    args.addAll(["--amend", "josxha/zulu-openjdk:$fromImageTag"]);
-  }
-  var result = await Process.run("docker", args);
+    ...fromImageTags.map((tag) => "josxha/zulu-openjdk:$tag"),
+  ]);
   if (result.exitCode != 0) {
     print(result.stdout);
     print(result.stderr);
@@ -113,7 +133,8 @@ Future<void> dockerCreateAndPushManifest(String imageTag, List<String> fromImage
   }
   // push the manifest
   result = await Process.run("docker", [
-    "manifest", "push",
+    "manifest",
+    "push",
     "josxha/zulu-openjdk:$imageTag",
   ]);
   if (result.exitCode != 0) {
@@ -126,7 +147,10 @@ Future<void> dockerCreateAndPushManifest(String imageTag, List<String> fromImage
 /// Data object for the zulu api response
 /// Azul API documentation:
 /// https://app.swaggerhub.com/domains-docs/azul/zulu-download-api-shared/1.0#/components/pathitems/Bundles/get
-Future<ZuluData> getZuluData({required String features, required OperatingSystem os, int java_version = JAVA_LTS_VERSION}) async {
+Future<ZuluData> getZuluData(
+    {required String features,
+    required OperatingSystem os,
+    int java_version = JAVA_LTS_VERSION}) async {
   // Example url:
   // https://api.azul.com/zulu/download/community/v1.0/bundles/latest/?os=linux_musl&arch=arm&hw_bitness=64&bundle_type=jre&ext=&java_version=17&features=headfull
   var uri = Uri(
@@ -154,16 +178,21 @@ Future<ZuluData> getZuluData({required String features, required OperatingSystem
   }
 }
 
-Future<void> dockerBuildAndPush(String imageTag, Architecture architecture) async {
+Future<void> dockerBuildAndPush(
+    String imageTag, Architecture architecture) async {
   var args = [
-    "buildx", "build", ".",
+    "buildx",
+    "build",
+    ".",
     "--push",
-    "-f", "Dockerfile.${architecture.docker}",
-    "--platform", architecture.dockerFull,
-    "--tag", "josxha/zulu-openjdk:$imageTag",
+    "-f",
+    "Dockerfile.${architecture.docker}",
+    "--platform",
+    architecture.dockerFull,
+    "--tag",
+    "josxha/zulu-openjdk:$imageTag",
   ];
-  if (DRY_RUN)
-    return;
+  if (DRY_RUN) return;
   var taskResult = Process.runSync("docker", args);
   if (taskResult.exitCode != 0) {
     print(taskResult.stdout);
@@ -181,9 +210,9 @@ Future<List<String>> getDockerImageTags() async {
     var response = await get(uri);
     Map<String, dynamic> json = jsonDecode(response.body);
     List jsonList = json["results"];
-    tags.addAll(jsonList.map((listElement) => listElement["name"] as String).toList());
-    if (json['next'] == null)
-      break;
+    tags.addAll(
+        jsonList.map((listElement) => listElement["name"] as String).toList());
+    if (json['next'] == null) break;
     page++;
   }
   return tags;
@@ -347,11 +376,13 @@ class OperatingSystem {
   final Architecture arch;
   final String name;
   final int bitness;
-  
+
   const OperatingSystem._(this.name, this.arch, this.bitness);
-  
-  static const linux_musl_amd64 = OperatingSystem._("linux_musl", Architecture.amd64, 64); // alpine linux
-  static const linux_arm64 = OperatingSystem._("linux_glibc", Architecture.arm64, 64);
+
+  static const linux_musl_amd64 =
+      OperatingSystem._("linux_musl", Architecture.amd64, 64); // alpine linux
+  static const linux_arm64 =
+      OperatingSystem._("linux_glibc", Architecture.arm64, 64);
 }
 
 class JavaBundleVersions {
