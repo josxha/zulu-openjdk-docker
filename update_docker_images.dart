@@ -75,6 +75,7 @@ main(List<String> args) async {
       "buildx",
       "build",
       "--push",
+      "--progress=plain",
       "--platform",
       "linux/arm/v8,linux/amd64",
       "--tag",
