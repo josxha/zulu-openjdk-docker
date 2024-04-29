@@ -1,3 +1,4 @@
+ARG ARCH=ARGUMENT_NOT_FILLED_IN
 FROM ubuntu:latest
 LABEL org.opencontainers.image.source="https://github.com/josxha/zulu-openjdk-docker" \
       org.opencontainers.image.authors="https://github.com/josxha" \
@@ -6,7 +7,7 @@ LABEL org.opencontainers.image.source="https://github.com/josxha/zulu-openjdk-do
       org.opencontainers.image.title="Zulu OpenJDK" \
       org.opencontainers.image.description="Automatic Docker builds for Zulu OpenJDK"
 
-COPY openjdk-${TARGETARCH}.tar.gz openjdk.tar.gz
+COPY openjdk-${ARCH}.tar.gz openjdk.tar.gz
 
 # install OpenJDK
 RUN tar -xzvf openjdk.tar.gz && \
