@@ -79,6 +79,7 @@ main(List<String> args) async {
       "linux/arm/v8,linux/amd64",
       "--tag",
       "josxha/zulu-openjdk:$imageTag",
+      "."
     ]);
     if (result.exitCode != 0) {
       print(result.stdout);
