@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:http/http.dart';
 
-const JAVA_LTS_VERSION = 17; // arm64 builds only available for openjdk17
+const JAVA_LTS_VERSION = 21; // arm64 builds only available for openjdk21
 // headless version not available for arm64
 // https://docs.azul.com/core/zulu-openjdk/supported-platforms
 const List<JavaBundleVersions> JAVA_BUNDLE_VERSIONS = [JavaBundleVersions.jre, JavaBundleVersions.jdk];

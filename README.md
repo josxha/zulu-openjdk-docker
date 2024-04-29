@@ -20,10 +20,10 @@ It's meant to be a open alternative to Microsoft's builds for Azure and more adv
 - [x] No restrictive licensing
 
 ## Usage
-- Run with: `docker run -it --rm josxha/zulu-openjdk:jre-17 java -version`.
+- Run with: `docker run -it --rm josxha/zulu-openjdk:jre-21 java -version`.
 - Use as a base image in your container with:
 ```Dockerfile
-FROM josxha/zulu-openjdk:jre-17
+FROM josxha/zulu-openjdk:jre-21
 WORKDIR /app
 COPY app.jar /app/app.jar
 ENTRYPOINT ["java -jar app.jar"]
