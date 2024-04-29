@@ -110,6 +110,7 @@ Future<void> dockerCreateAndPushManifest(String imageTag, List<String> fromImage
     throw "Couldn't create docker manifest.";
   }
   // push the manifest
+  print('docker manifest push josxha/zulu-openjdk:$imageTag');
   result = await Process.run("docker", [
     "manifest", "push",
     "josxha/zulu-openjdk:$imageTag",
